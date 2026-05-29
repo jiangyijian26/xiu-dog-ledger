@@ -1,0 +1,9 @@
+{
+  "name": "修狗记账",
+  "short_name": "修狗记账",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f8fb",
+  "theme_color": "#f6c85f",
+  "icons": []
+}

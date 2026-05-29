@@ -1,0 +1,27 @@
+{
+  "name": "xiu-dog-ledger-server",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20.19 <25",
+    "npm": ">=10"
+  },
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "dev:local": "cross-env LOCAL_DEMO=true JWT_SECRET=local-demo-secret CLIENT_ORIGIN=* node --watch src/index.js",
+    "start": "node src/index.js",
+    "migrate": "node scripts/migrate.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.16.3",
+    "zod": "^4.1.12"
+  }
+}
