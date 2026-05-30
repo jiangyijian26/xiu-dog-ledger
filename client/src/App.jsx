@@ -1,16 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ArrowDownRight,
-  ArrowUpRight,
   BarChart3,
   BookOpen,
   CalendarDays,
   CreditCard,
   Dog,
-  Flame,
   Home,
-  Landmark,
-  ListChecks,
   LogOut,
   Moon,
   PieChart,
@@ -23,7 +18,6 @@ import {
   Tags,
   Target,
   Trash2,
-  TrendingUp,
   Wallet
 } from 'lucide-react';
 import {
@@ -238,62 +232,34 @@ function HomePage({ data, accounts, categories, reload }) {
   const expense = Number(totals.expense || 0);
   const remainingBudget = Number(totals.remainingBudget || 0);
   const budgetUsed = totalBudget > 0 ? Math.min((expense / totalBudget) * 100, 100) : 0;
-  const accountTotal = accounts.reduce((sum, account) => sum + Number(account.balance || 0), 0);
   const dailyAvailable = Number(totals.dailyAvailable || 0);
   const budgetTone = budgetUsed >= 90 ? 'danger' : budgetUsed >= 70 ? 'warn' : 'good';
-  const campusTags = ['食堂', '奶茶零食', '交通', '学习文具', '校园卡'];
 
   return (
-    <div className="page-grid">
-      <section className="dashboard-hero">
-        <div className="hero-copy">
-          <div className="eyebrow"><Dog size={18} /> 阿修今日建议</div>
-          <h2>{dailyAvailable > 0 ? `今天安心花 ${money(dailyAvailable)}` : '先设预算，阿修给建议'}</h2>
-          <p>{cycle ? `${cycle.startDate} 至 ${cycle.endDate}，剩余 ${cycle.remainingDays || 0} 天` : '还没有当前周期，去管理页设置一个记账周期。'}</p>
-          <div className="hero-tags">
-            <span>{student?.enabled ? '学生模式已开启' : '普通周期模式'}</span>
-            <span>账户合计 {money(accountTotal)}</span>
-            <span>预算剩余 {money(remainingBudget)}</span>
-          </div>
-          <div className="campus-tags">
-            {campusTags.map((tag) => <span key={tag}>{tag}</span>)}
-          </div>
-        </div>
-        <div className="ashu-hero-side">
-          <div className="ashu-helper">
-            <img src={ashuCorgi} alt="阿修柯基预算助手" />
-            <div className="ashu-tip">{budgetUsed >= 90 ? '预算快见底啦，今天少花一点。' : budgetUsed >= 70 ? '节奏有点快，阿修帮你盯着。' : '预算节奏不错，可以安心记录。'}</div>
-          </div>
-          <div className={`budget-radar ${budgetTone}`}>
-            <span><ShieldCheck size={16} /> 预算使用率</span>
-            <strong>{percent(budgetUsed)}</strong>
-            <ProgressBar value={budgetUsed} />
-            <small>已支出 {money(expense)} / 预算 {money(totalBudget)}</small>
-          </div>
-        </div>
-      </section>
-
-      <div className="metric-grid">
-        <Metric icon={ArrowUpRight} title="周期收入" value={money(totals.income)} tone="green" />
-        <Metric icon={ArrowDownRight} title="周期支出" value={money(expense)} tone="red" />
-        <Metric icon={Target} title="周期预算" value={money(totalBudget)} tone="blue" />
-        <Metric icon={Flame} title="预算剩余" value={money(remainingBudget)} tone="yellow" />
-      </div>
-
-      <div className="home-split">
+    <div className="page-grid quick-home">
+      <div className="quick-home-grid">
         <BillForm accounts={accounts} categories={categories} onCreated={reload} />
-        <section className="panel insight-panel">
-          <div className="panel-title">
-            <h3>本周期洞察</h3>
-            <TrendingUp size={19} />
+        <section className={`panel ashu-summary ${budgetTone}`}>
+          <div className="ashu-summary-head">
+            <img src={ashuCorgi} alt="阿修柯基预算助手" />
+            <div>
+              <div className="eyebrow"><Dog size={16} /> 阿修今日建议</div>
+              <h2>{dailyAvailable > 0 ? money(dailyAvailable) : '先设预算'}</h2>
+              <p>{dailyAvailable > 0 ? '今天可以安心花的参考金额' : '设置预算后，阿修会每天帮你算。'}</p>
+            </div>
           </div>
-          <InsightCard icon={ListChecks} label="账单记录" value={`${recentBills.length} 条近期记录`} />
-          <InsightCard icon={Landmark} label="账户数量" value={`${accounts.length} 个账户可用`} />
-          <InsightCard icon={PieChart} label="分类数量" value={`${categories.length} 个分类`} />
+          <div className="summary-progress">
+            <span><ShieldCheck size={16} /> 预算使用率 {percent(budgetUsed)}</span>
+            <ProgressBar value={budgetUsed} />
+          </div>
+          <div className="summary-facts">
+            <span>{cycle ? `剩余 ${cycle.remainingDays || 0} 天` : '未设置周期'}</span>
+            <span>已支出 {money(expense)}</span>
+            <span>预算剩余 {money(remainingBudget)}</span>
+            <span>{student?.enabled ? '学生模式' : '普通周期'}</span>
+          </div>
         </section>
       </div>
-
-      <AccountRail accounts={accounts} />
 
       <section className="panel">
         <div className="panel-title">
@@ -308,46 +274,6 @@ function HomePage({ data, accounts, categories, reload }) {
 
 function ProgressBar({ value }) {
   return <div className="progress-track"><span style={{ width: `${Math.max(0, Math.min(value, 100))}%` }} /></div>;
-}
-
-function Metric({ icon: Icon, title, value, tone }) {
-  return (
-    <div className={`metric ${tone}`}>
-      <span>{Icon && <Icon size={18} />}{title}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function InsightCard({ icon: Icon, label, value }) {
-  return (
-    <div className="insight-row">
-      {Icon && <Icon size={18} />}
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function AccountRail({ accounts }) {
-  if (!accounts.length) return null;
-  return (
-    <section className="account-rail">
-      <div className="rail-heading">
-        <span><CreditCard size={18} /> 账户快览</span>
-        <strong>{money(accounts.reduce((sum, item) => sum + Number(item.balance || 0), 0))}</strong>
-      </div>
-      <div className="account-strip">
-        {accounts.map((account) => (
-          <div className="account-card" key={account.id}>
-            <span>{account.name}</span>
-            <strong>{money(account.balance)}</strong>
-            <small>{account.type}</small>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
 }
 
 function BillList({ bills, onDelete, compact = false }) {
