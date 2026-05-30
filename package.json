@@ -16,7 +16,7 @@
     "dev:local": "concurrently \"npm run dev:local -w server\" \"npm run dev:local -w client\"",
     "build": "npm run build -w client",
     "migrate": "npm run migrate -w server",
-    "start": "npm run start -w server",
+    "start": "npm run migrate -w server && npm run start -w server",
     "lint": "npm run lint -w client",
     "test": "npm run test -w server"
   },
