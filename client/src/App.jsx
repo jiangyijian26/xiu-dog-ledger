@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ArrowDownRight,
+  ArrowUpRight,
   BarChart3,
   BookOpen,
   CalendarDays,
   CreditCard,
   Dog,
+  Flame,
   Home,
+  Landmark,
+  ListChecks,
   LogOut,
   Moon,
   PieChart,
@@ -13,8 +18,12 @@ import {
   RefreshCw,
   Search,
   Settings,
+  ShieldCheck,
+  Sparkles,
   Tags,
+  Target,
   Trash2,
+  TrendingUp,
   Wallet
 } from 'lucide-react';
 import {
@@ -30,6 +39,7 @@ import {
   YAxis
 } from 'recharts';
 import { clearSession, getStoredUser, request, setSession } from './api.js';
+import ashuCorgi from './assets/ashu-corgi.png';
 
 const navItems = [
   { key: 'home', label: '首页', icon: Home },
@@ -43,6 +53,10 @@ const colors = ['#f6c85f', '#54b399', '#6b8afd', '#f27c7c', '#8c6ff0', '#38a3a5'
 
 function money(value) {
   return `¥${Number(value || 0).toFixed(2)}`;
+}
+
+function percent(value) {
+  return `${Math.round(Number(value || 0))}%`;
 }
 
 function todayInput() {
@@ -75,10 +89,29 @@ function AuthScreen({ onAuthed }) {
 
   return (
     <main className="auth-shell">
+      <section className="auth-story">
+        <div className="brand-mark"><Dog size={38} /> 修狗记账</div>
+        <h1>阿修陪你，把生活费花得明明白白。</h1>
+        <p>为学生生活费、校园消费和轻量记账设计。每天打开，阿修都会帮你看预算、看余额、看今天还能安心花多少。</p>
+        <div className="auth-highlights">
+          <span><Sparkles size={17} /> 阿修今日建议</span>
+          <span><Target size={17} /> 周期预算</span>
+          <span><BookOpen size={17} /> 校园分类</span>
+        </div>
+        <div className="mascot-stage" aria-hidden="true">
+          <div className="speech-bubble">今天先看预算，再决定奶茶要不要加料。</div>
+          <img src={ashuCorgi} alt="" />
+          <div className="campus-preview">
+            <span>生活费周期</span>
+            <strong>剩余 12 天</strong>
+            <small>今日建议 ¥42.80</small>
+          </div>
+        </div>
+      </section>
       <section className="auth-panel">
-        <div className="brand-mark"><Dog size={36} /> 阿修</div>
-        <h1>修狗记账</h1>
-        <p>按真实生活费周期管理账单、预算和校园消费。</p>
+        <div className="panel-kicker">开始使用</div>
+        <h2>{mode === 'login' ? '欢迎回来' : '创建你的账本'}</h2>
+        <p>{mode === 'login' ? '登录后继续管理今天的预算。' : '注册后会自动生成账户、分类和当前周期。'}</p>
         <form onSubmit={submit} className="stack">
           {mode === 'register' && (
             <label>
@@ -116,6 +149,7 @@ function BillForm({ accounts, categories, onCreated }) {
     remark: ''
   });
   const [error, setError] = useState('');
+  const [saved, setSaved] = useState(false);
 
   const filteredCategories = categories.filter((item) => item.kind === form.type);
 
@@ -125,6 +159,8 @@ function BillForm({ accounts, categories, onCreated }) {
     try {
       await request('/bills', { method: 'POST', body: { ...form, amount: Number(form.amount) } });
       setForm({ ...form, amount: '', remark: '' });
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2200);
       onCreated();
     } catch (err) {
       setError(err.message);
@@ -133,6 +169,13 @@ function BillForm({ accounts, categories, onCreated }) {
 
   return (
     <form className="panel bill-form" onSubmit={submit}>
+      <div className="panel-title bill-form-title">
+        <div>
+          <h3>快速记账</h3>
+          <p>记完一笔，阿修会同步更新账户余额和本周期预算。</p>
+        </div>
+        <span className="soft-badge"><Dog size={15} /> 阿修助手</span>
+      </div>
       <div className="segmented">
         {['expense', 'income', 'transfer'].map((type) => (
           <button type="button" key={type} className={form.type === type ? 'active' : ''} onClick={() => setForm({ ...form, type, categoryId: '' })}>
@@ -180,6 +223,7 @@ function BillForm({ accounts, categories, onCreated }) {
         </label>
       </div>
       {error && <div className="error">{error}</div>}
+      {saved && <div className="success-bark"><Dog size={17} /> 阿修已帮你记上啦</div>}
       <button className="primary"><Plus size={18} /> 记一笔</button>
     </form>
   );
@@ -190,26 +234,66 @@ function HomePage({ data, accounts, categories, reload }) {
   const totals = data.dashboard?.totals || {};
   const recentBills = data.dashboard?.recentBills || [];
   const student = data.dashboard?.studentSettings;
+  const totalBudget = Number(totals.totalBudget || 0);
+  const expense = Number(totals.expense || 0);
+  const remainingBudget = Number(totals.remainingBudget || 0);
+  const budgetUsed = totalBudget > 0 ? Math.min((expense / totalBudget) * 100, 100) : 0;
+  const accountTotal = accounts.reduce((sum, account) => sum + Number(account.balance || 0), 0);
+  const dailyAvailable = Number(totals.dailyAvailable || 0);
+  const budgetTone = budgetUsed >= 90 ? 'danger' : budgetUsed >= 70 ? 'warn' : 'good';
+  const campusTags = ['食堂', '奶茶零食', '交通', '学习文具', '校园卡'];
 
   return (
     <div className="page-grid">
-      <section className="hero-band">
-        <div>
-          <div className="eyebrow"><Dog size={18} /> 当前周期</div>
-          <h2>{cycle ? `${cycle.startDate} 至 ${cycle.endDate}` : '未设置周期'}</h2>
-          <p>{student?.enabled ? `生活费周期已开启，剩余 ${cycle?.remainingDays || 0} 天` : `剩余 ${cycle?.remainingDays || 0} 天，按当前账单周期统计`}</p>
+      <section className="dashboard-hero">
+        <div className="hero-copy">
+          <div className="eyebrow"><Dog size={18} /> 阿修今日建议</div>
+          <h2>{dailyAvailable > 0 ? `今天安心花 ${money(dailyAvailable)}` : '先设预算，阿修给建议'}</h2>
+          <p>{cycle ? `${cycle.startDate} 至 ${cycle.endDate}，剩余 ${cycle.remainingDays || 0} 天` : '还没有当前周期，去管理页设置一个记账周期。'}</p>
+          <div className="hero-tags">
+            <span>{student?.enabled ? '学生模式已开启' : '普通周期模式'}</span>
+            <span>账户合计 {money(accountTotal)}</span>
+            <span>预算剩余 {money(remainingBudget)}</span>
+          </div>
+          <div className="campus-tags">
+            {campusTags.map((tag) => <span key={tag}>{tag}</span>)}
+          </div>
         </div>
-        <div className="daily-pill">今日建议 {money(totals.dailyAvailable)}</div>
+        <div className="ashu-hero-side">
+          <div className="ashu-helper">
+            <img src={ashuCorgi} alt="阿修柯基预算助手" />
+            <div className="ashu-tip">{budgetUsed >= 90 ? '预算快见底啦，今天少花一点。' : budgetUsed >= 70 ? '节奏有点快，阿修帮你盯着。' : '预算节奏不错，可以安心记录。'}</div>
+          </div>
+          <div className={`budget-radar ${budgetTone}`}>
+            <span><ShieldCheck size={16} /> 预算使用率</span>
+            <strong>{percent(budgetUsed)}</strong>
+            <ProgressBar value={budgetUsed} />
+            <small>已支出 {money(expense)} / 预算 {money(totalBudget)}</small>
+          </div>
+        </div>
       </section>
 
       <div className="metric-grid">
-        <Metric title="周期收入" value={money(totals.income)} tone="green" />
-        <Metric title="周期支出" value={money(totals.expense)} tone="red" />
-        <Metric title="周期预算" value={money(totals.totalBudget)} tone="blue" />
-        <Metric title="预算剩余" value={money(totals.remainingBudget)} tone="yellow" />
+        <Metric icon={ArrowUpRight} title="周期收入" value={money(totals.income)} tone="green" />
+        <Metric icon={ArrowDownRight} title="周期支出" value={money(expense)} tone="red" />
+        <Metric icon={Target} title="周期预算" value={money(totalBudget)} tone="blue" />
+        <Metric icon={Flame} title="预算剩余" value={money(remainingBudget)} tone="yellow" />
       </div>
 
-      <BillForm accounts={accounts} categories={categories} onCreated={reload} />
+      <div className="home-split">
+        <BillForm accounts={accounts} categories={categories} onCreated={reload} />
+        <section className="panel insight-panel">
+          <div className="panel-title">
+            <h3>本周期洞察</h3>
+            <TrendingUp size={19} />
+          </div>
+          <InsightCard icon={ListChecks} label="账单记录" value={`${recentBills.length} 条近期记录`} />
+          <InsightCard icon={Landmark} label="账户数量" value={`${accounts.length} 个账户可用`} />
+          <InsightCard icon={PieChart} label="分类数量" value={`${categories.length} 个分类`} />
+        </section>
+      </div>
+
+      <AccountRail accounts={accounts} />
 
       <section className="panel">
         <div className="panel-title">
@@ -222,17 +306,52 @@ function HomePage({ data, accounts, categories, reload }) {
   );
 }
 
-function Metric({ title, value, tone }) {
+function ProgressBar({ value }) {
+  return <div className="progress-track"><span style={{ width: `${Math.max(0, Math.min(value, 100))}%` }} /></div>;
+}
+
+function Metric({ icon: Icon, title, value, tone }) {
   return (
     <div className={`metric ${tone}`}>
-      <span>{title}</span>
+      <span>{Icon && <Icon size={18} />}{title}</span>
       <strong>{value}</strong>
     </div>
   );
 }
 
+function InsightCard({ icon: Icon, label, value }) {
+  return (
+    <div className="insight-row">
+      {Icon && <Icon size={18} />}
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function AccountRail({ accounts }) {
+  if (!accounts.length) return null;
+  return (
+    <section className="account-rail">
+      <div className="rail-heading">
+        <span><CreditCard size={18} /> 账户快览</span>
+        <strong>{money(accounts.reduce((sum, item) => sum + Number(item.balance || 0), 0))}</strong>
+      </div>
+      <div className="account-strip">
+        {accounts.map((account) => (
+          <div className="account-card" key={account.id}>
+            <span>{account.name}</span>
+            <strong>{money(account.balance)}</strong>
+            <small>{account.type}</small>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function BillList({ bills, onDelete, compact = false }) {
-  if (!bills.length) return <div className="empty">暂无账单</div>;
+  if (!bills.length) return <EmptyState title="阿修还没闻到账单" text="记一笔食堂、奶茶或交通支出，让本周期看板动起来。" />;
   return (
     <div className="bill-list">
       {bills.map((bill) => (
@@ -249,6 +368,16 @@ function BillList({ bills, onDelete, compact = false }) {
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+function EmptyState({ title, text }) {
+  return (
+    <div className="empty themed-empty">
+      <img src={ashuCorgi} alt="" />
+      <strong>{title}</strong>
+      <span>{text}</span>
     </div>
   );
 }
@@ -306,13 +435,13 @@ function BudgetPage({ budgets, categories, cycle, reload }) {
         <button className="primary">保存</button>
       </form>
       <div className="tile-list">
-        {budgets.map((budget) => (
+        {budgets.length ? budgets.map((budget) => (
           <div className="tile" key={budget.id}>
             <span>{budget.type === 'total' ? '周期总预算' : budget.categoryName}</span>
             <strong>{money(budget.amount)}</strong>
             <button className="icon-btn danger" title="删除" onClick={() => remove(budget.id)}><Trash2 size={17} /></button>
           </div>
-        ))}
+        )) : <EmptyState title="还没有预算" text="给阿修一个周期预算，它才能每天提醒你还能花多少。" />}
       </div>
     </section>
   );
@@ -510,8 +639,12 @@ export default function App() {
           <div>
             <span className="sync-dot">同步成功</span>
             <h1>{navItems.find((item) => item.key === active)?.label}</h1>
+            <p className="page-subtitle">今天的数据已经和云端账本保持一致</p>
           </div>
-          <div className="user-box"><Moon size={18} /> {user.nickname}</div>
+          <div className="top-actions">
+            <span className="cloud-pill"><ShieldCheck size={16} /> Secure</span>
+            <div className="user-box"><Moon size={18} /> {user.nickname}</div>
+          </div>
         </header>
         {error && <div className="error">{error}</div>}
         {loading ? <div className="loading">加载中...</div> : (
